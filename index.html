@@ -1,0 +1,836 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#3b82f6" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="default"
+    />
+    <meta name="apple-mobile-web-app-title" content="待办清单" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta
+      name="description"
+      content="本地保存的待办清单：添加、完成、删除与统计。"
+    />
+    <title>Todo App - 待办清单</title>
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
+    <style>
+      /* ========= 主题色与基础样式（浅蓝现代风） ========= */
+      :root {
+        --bg: #f4f8ff;
+        --card: rgba(255, 255, 255, 0.86);
+        --text: #0f172a;
+        --muted: #64748b;
+        --primary: #3b82f6; /* 主色：浅蓝 */
+        --primary-600: #2563eb;
+        --danger: #ef4444;
+        --danger-600: #dc2626;
+        --border: rgba(148, 163, 184, 0.35);
+        --shadow: 0 14px 40px rgba(15, 23, 42, 0.12);
+        --ring: 0 0 0 4px rgba(59, 130, 246, 0.22);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
+      }
+
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
+          Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+        color: var(--text);
+        background: radial-gradient(
+            1200px 600px at 10% 0%,
+            rgba(59, 130, 246, 0.22),
+            transparent 55%
+          ),
+          radial-gradient(
+            1000px 520px at 95% 10%,
+            rgba(14, 165, 233, 0.18),
+            transparent 52%
+          ),
+          var(--bg);
+        min-height: 100svh;
+        min-height: 100dvh;
+        display: grid;
+        place-items: center;
+        padding: max(16px, env(safe-area-inset-top, 0px))
+          max(16px, env(safe-area-inset-right, 0px))
+          max(20px, env(safe-area-inset-bottom, 0px))
+          max(16px, env(safe-area-inset-left, 0px));
+        -webkit-tap-highlight-color: rgba(59, 130, 246, 0.15);
+      }
+
+      .app {
+        width: min(780px, 100%);
+        max-width: 100%;
+        border: 1px solid var(--border);
+        background: var(--card);
+        backdrop-filter: blur(10px);
+        border-radius: 18px;
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+
+      header {
+        padding: 22px 22px 14px;
+        border-bottom: 1px solid var(--border);
+        display: grid;
+        gap: 6px;
+      }
+
+      .title {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 20px;
+        letter-spacing: 0.2px;
+      }
+
+      .subtitle {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .stats {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 6px;
+      }
+
+      .chip {
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.7);
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .chip strong {
+        color: var(--text);
+        font-weight: 700;
+      }
+
+      main {
+        padding: 18px 22px 22px;
+      }
+
+      /* ========= 输入区域 ========= */
+      .row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .input {
+        width: 100%;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.7);
+        border-radius: 12px;
+        padding: 12px 12px;
+        font-size: 14px;
+        outline: none;
+        transition: box-shadow 150ms ease, border-color 150ms ease,
+          transform 150ms ease;
+      }
+
+      .input:focus {
+        border-color: rgba(59, 130, 246, 0.6);
+        box-shadow: var(--ring);
+      }
+
+      .btn {
+        border: 1px solid transparent;
+        border-radius: 12px;
+        padding: 11px 14px;
+        font-size: 14px;
+        font-weight: 650;
+        cursor: pointer;
+        transition: transform 120ms ease, box-shadow 120ms ease,
+          background 120ms ease, border-color 120ms ease;
+        user-select: none;
+        touch-action: manipulation;
+      }
+
+      /* 按钮 hover 动效：轻微上浮 + 阴影 */
+      .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 20px rgba(15, 23, 42, 0.12);
+      }
+
+      .btn:active {
+        transform: translateY(0px);
+        box-shadow: none;
+      }
+
+      .btn-primary {
+        background: linear-gradient(180deg, var(--primary), var(--primary-600));
+        color: white;
+      }
+
+      .btn-primary:hover {
+        background: linear-gradient(180deg, #4f8ef8, var(--primary-600));
+      }
+
+      .btn-ghost {
+        background: rgba(255, 255, 255, 0.65);
+        border-color: var(--border);
+        color: var(--text);
+      }
+
+      .btn-danger {
+        background: rgba(239, 68, 68, 0.12);
+        color: var(--danger-600);
+        border-color: rgba(239, 68, 68, 0.25);
+      }
+
+      .btn-danger:hover {
+        background: rgba(239, 68, 68, 0.16);
+      }
+
+      .toolbar {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 12px;
+      }
+
+      .filters {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .filter {
+        padding: 8px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.6);
+        cursor: pointer;
+        font-size: 12px;
+        color: var(--muted);
+        transition: background 120ms ease, transform 120ms ease,
+          box-shadow 120ms ease, border-color 120ms ease, color 120ms ease;
+        touch-action: manipulation;
+      }
+
+      .filter:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 20px rgba(15, 23, 42, 0.1);
+      }
+
+      .filter[aria-pressed="true"] {
+        color: white;
+        background: linear-gradient(180deg, var(--primary), var(--primary-600));
+        border-color: transparent;
+      }
+
+      /* ========= 列表区域 ========= */
+      .list {
+        list-style: none;
+        margin: 16px 0 0;
+        padding: 0;
+        display: grid;
+        gap: 10px;
+      }
+
+      .item {
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.72);
+        border-radius: 14px;
+        padding: 12px 12px;
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .check {
+        width: 18px;
+        height: 18px;
+        border-radius: 6px;
+        border: 1px solid rgba(59, 130, 246, 0.5);
+        background: rgba(59, 130, 246, 0.07);
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+        transition: transform 120ms ease, background 120ms ease,
+          border-color 120ms ease;
+        touch-action: manipulation;
+      }
+
+      .check:hover {
+        transform: scale(1.04);
+        background: rgba(59, 130, 246, 0.12);
+      }
+
+      .check[data-checked="true"] {
+        background: linear-gradient(180deg, var(--primary), var(--primary-600));
+        border-color: transparent;
+      }
+
+      .check svg {
+        width: 14px;
+        height: 14px;
+        opacity: 0;
+        transform: scale(0.9);
+        transition: opacity 120ms ease, transform 120ms ease;
+        color: white;
+      }
+
+      .check[data-checked="true"] svg {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      .text {
+        min-width: 0;
+      }
+
+      .todo-title {
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.35;
+        word-break: break-word;
+      }
+
+      .meta {
+        margin: 4px 0 0;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .item[data-done="true"] .todo-title {
+        text-decoration: line-through;
+        color: rgba(15, 23, 42, 0.55);
+      }
+
+      .empty {
+        margin-top: 14px;
+        padding: 18px;
+        border-radius: 14px;
+        border: 1px dashed rgba(59, 130, 246, 0.35);
+        color: var(--muted);
+        background: rgba(59, 130, 246, 0.06);
+        display: none;
+      }
+
+      .empty[aria-hidden="false"] {
+        display: block;
+      }
+
+      footer {
+        padding: 14px 22px 18px;
+        border-top: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 12px;
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      /* ========= 平板与手机：单列、触控与可读性 ========= */
+      @media (max-width: 720px) {
+        body {
+          padding-top: max(12px, env(safe-area-inset-top, 0px));
+          place-items: start center;
+        }
+
+        header {
+          padding: 18px 16px 12px;
+        }
+
+        main {
+          padding: 14px 16px 16px;
+        }
+
+        .app {
+          border-radius: 14px;
+        }
+
+        .title {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .title .chip {
+          align-self: flex-start;
+        }
+
+        h1 {
+          font-size: clamp(1.15rem, 4.2vw, 1.35rem);
+          line-height: 1.25;
+        }
+
+        .subtitle {
+          font-size: 14px;
+        }
+
+        .stats {
+          gap: 8px;
+        }
+
+        .chip {
+          padding: 8px 12px;
+          font-size: 13px;
+          line-height: 1.35;
+        }
+
+        .row {
+          grid-template-columns: 1fr;
+          gap: 12px;
+        }
+
+        .input {
+          width: 100%;
+          min-height: 48px;
+          font-size: 16px;
+          padding: 14px 14px;
+        }
+
+        .btn {
+          width: 100%;
+          min-height: 48px;
+          padding: 14px 16px;
+          font-size: 16px;
+        }
+
+        .toolbar {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 12px;
+          margin-top: 14px;
+        }
+
+        .filters {
+          width: 100%;
+          gap: 10px;
+        }
+
+        .filter {
+          flex: 1 1 auto;
+          min-width: 0;
+          min-height: 44px;
+          padding: 10px 12px;
+          font-size: 14px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        #clearDone {
+          width: 100%;
+        }
+
+        .list {
+          gap: 12px;
+        }
+
+        .item {
+          grid-template-columns: auto 1fr;
+          grid-template-areas:
+            "check text"
+            "actions actions";
+          padding: 14px 14px;
+          gap: 12px 14px;
+          align-items: start;
+        }
+
+        .item .check {
+          grid-area: check;
+        }
+
+        .item .text {
+          grid-area: text;
+        }
+
+        .item .actions {
+          grid-area: actions;
+          display: flex;
+          justify-content: stretch;
+        }
+
+        .check {
+          width: 44px;
+          height: 44px;
+          min-width: 44px;
+          min-height: 44px;
+          border-radius: 12px;
+        }
+
+        .check svg {
+          width: 18px;
+          height: 18px;
+        }
+
+        .todo-title {
+          font-size: 16px;
+          line-height: 1.45;
+        }
+
+        .meta {
+          font-size: 13px;
+          margin-top: 6px;
+        }
+
+        .actions .btn-danger {
+          width: 100%;
+          min-height: 48px;
+        }
+
+        .empty {
+          font-size: 15px;
+          line-height: 1.5;
+          padding: 20px 16px;
+        }
+
+        footer {
+          padding: 12px 16px max(14px, env(safe-area-inset-bottom, 0px));
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 8px;
+          font-size: 13px;
+          line-height: 1.45;
+        }
+      }
+
+      @media (max-width: 720px) and (hover: hover) {
+        .btn:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 10px 20px rgba(15, 23, 42, 0.12);
+        }
+
+        .filter:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 10px 20px rgba(15, 23, 42, 0.1);
+        }
+
+        .check:hover {
+          transform: scale(1.04);
+          background: rgba(59, 130, 246, 0.12);
+        }
+      }
+
+      @media (max-width: 380px) {
+        .filters {
+          flex-direction: column;
+        }
+
+        .filter {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app" role="application" aria-label="待办清单 Todo App">
+      <header>
+        <div class="title">
+          <h1>待办清单 Todo App</h1>
+          <span class="chip" title="数据会保存到浏览器本地">
+            本地保存：<strong>开启</strong>
+          </span>
+        </div>
+        <p class="subtitle">
+          支持：添加 / 标记完成 / 删除 / 统计数量（已完成与未完成）
+        </p>
+        <div class="stats" aria-label="统计信息">
+          <span class="chip">未完成：<strong id="countActive">0</strong></span>
+          <span class="chip">已完成：<strong id="countDone">0</strong></span>
+          <span class="chip">总计：<strong id="countTotal">0</strong></span>
+        </div>
+      </header>
+
+      <main>
+        <form id="form" class="row" autocomplete="off">
+          <input
+            id="input"
+            class="input"
+            type="text"
+            placeholder="输入一个待办事项，例如：学习 30 分钟"
+            aria-label="待办输入框"
+          />
+          <button class="btn btn-primary" type="submit">添加</button>
+        </form>
+
+        <div class="toolbar" aria-label="工具栏">
+          <div class="filters" role="group" aria-label="筛选">
+            <button class="filter" type="button" data-filter="all" aria-pressed="true">
+              全部
+            </button>
+            <button class="filter" type="button" data-filter="active" aria-pressed="false">
+              未完成
+            </button>
+            <button class="filter" type="button" data-filter="done" aria-pressed="false">
+              已完成
+            </button>
+          </div>
+          <button id="clearDone" class="btn btn-ghost" type="button">
+            清空已完成
+          </button>
+        </div>
+
+        <div id="empty" class="empty" aria-hidden="false">
+          还没有待办。先在上面输入一个目标吧。
+        </div>
+
+        <ul id="list" class="list" aria-label="待办列表"></ul>
+      </main>
+
+      <footer>
+        <span>快捷键：在输入框按 Enter 添加</span>
+        <span>提示：点击左侧勾选按钮可切换完成状态</span>
+      </footer>
+    </div>
+
+    <script>
+      /**
+       * Todo App（单文件版）
+       * - 说明：所有数据会保存在浏览器 localStorage，刷新页面不会丢失
+       * - 结构：state（数据） + render（渲染） + actions（操作）
+       */
+
+      // ======== DOM 引用 ========
+      const formEl = document.getElementById("form");
+      const inputEl = document.getElementById("input");
+      const listEl = document.getElementById("list");
+      const emptyEl = document.getElementById("empty");
+      const clearDoneEl = document.getElementById("clearDone");
+      const countActiveEl = document.getElementById("countActive");
+      const countDoneEl = document.getElementById("countDone");
+      const countTotalEl = document.getElementById("countTotal");
+      const filterButtons = Array.from(document.querySelectorAll(".filter"));
+
+      // ======== 本地存储 key（可自行修改）========
+      const STORAGE_KEY = "todo_app_v1";
+
+      // ======== 应用状态 ========
+      /** @type {{ id: string, title: string, done: boolean, createdAt: number }[]} */
+      let todos = loadTodos();
+      /** @type {"all" | "active" | "done"} */
+      let filter = "all";
+
+      // ======== 工具函数 ========
+      function uid() {
+        // 简单随机 id（不依赖外部库）
+        return Math.random().toString(16).slice(2) + Date.now().toString(16);
+      }
+
+      function formatTime(ts) {
+        // 将时间戳格式化成更友好的展示（本地时区）
+        const d = new Date(ts);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        const hh = String(d.getHours()).padStart(2, "0");
+        const mm = String(d.getMinutes()).padStart(2, "0");
+        return `${y}-${m}-${day} ${hh}:${mm}`;
+      }
+
+      function saveTodos() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
+      }
+
+      function loadTodos() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return [];
+          const parsed = JSON.parse(raw);
+          if (!Array.isArray(parsed)) return [];
+          // 做一次基础校验，避免旧数据结构导致报错
+          return parsed
+            .filter((t) => t && typeof t.title === "string")
+            .map((t) => ({
+              id: typeof t.id === "string" ? t.id : uid(),
+              title: String(t.title),
+              done: Boolean(t.done),
+              createdAt: typeof t.createdAt === "number" ? t.createdAt : Date.now(),
+            }));
+        } catch {
+          return [];
+        }
+      }
+
+      // ======== 渲染 ========
+      function getVisibleTodos() {
+        if (filter === "active") return todos.filter((t) => !t.done);
+        if (filter === "done") return todos.filter((t) => t.done);
+        return todos;
+      }
+
+      function updateStats() {
+        const total = todos.length;
+        const done = todos.filter((t) => t.done).length;
+        const active = total - done;
+        countTotalEl.textContent = String(total);
+        countDoneEl.textContent = String(done);
+        countActiveEl.textContent = String(active);
+      }
+
+      function setEmptyState(visibleCount) {
+        emptyEl.setAttribute("aria-hidden", visibleCount === 0 ? "false" : "true");
+      }
+
+      function render() {
+        const visible = getVisibleTodos();
+        listEl.innerHTML = "";
+
+        for (const todo of visible) {
+          const li = document.createElement("li");
+          li.className = "item";
+          li.dataset.id = todo.id;
+          li.dataset.done = todo.done ? "true" : "false";
+
+          // 左侧：完成勾选按钮
+          const check = document.createElement("button");
+          check.className = "check";
+          check.type = "button";
+          check.dataset.checked = todo.done ? "true" : "false";
+          check.setAttribute("aria-label", todo.done ? "标记为未完成" : "标记为已完成");
+          check.innerHTML =
+            '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M16.5 6.2 8.7 14 3.5 8.8" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+          // 中间：文字与元信息
+          const textWrap = document.createElement("div");
+          textWrap.className = "text";
+          const title = document.createElement("p");
+          title.className = "todo-title";
+          title.textContent = todo.title;
+          const meta = document.createElement("p");
+          meta.className = "meta";
+          meta.textContent = `创建于：${formatTime(todo.createdAt)}`;
+          textWrap.appendChild(title);
+          textWrap.appendChild(meta);
+
+          // 右侧：删除按钮
+          const actions = document.createElement("div");
+          actions.className = "actions";
+          const del = document.createElement("button");
+          del.className = "btn btn-danger";
+          del.type = "button";
+          del.textContent = "删除";
+          del.setAttribute("aria-label", "删除该待办");
+          actions.appendChild(del);
+
+          li.appendChild(check);
+          li.appendChild(textWrap);
+          li.appendChild(actions);
+          listEl.appendChild(li);
+        }
+
+        updateStats();
+        setEmptyState(visible.length);
+      }
+
+      // ======== 操作（添加 / 切换完成 / 删除 / 清空已完成 / 筛选）========
+      function addTodo(title) {
+        const t = title.trim();
+        if (!t) return;
+        todos.unshift({ id: uid(), title: t, done: false, createdAt: Date.now() });
+        saveTodos();
+        render();
+      }
+
+      function toggleTodo(id) {
+        const idx = todos.findIndex((t) => t.id === id);
+        if (idx === -1) return;
+        todos[idx] = { ...todos[idx], done: !todos[idx].done };
+        saveTodos();
+        render();
+      }
+
+      function deleteTodo(id) {
+        todos = todos.filter((t) => t.id !== id);
+        saveTodos();
+        render();
+      }
+
+      function clearDone() {
+        todos = todos.filter((t) => !t.done);
+        saveTodos();
+        render();
+      }
+
+      function setFilter(next) {
+        filter = next;
+        for (const btn of filterButtons) {
+          const pressed = btn.dataset.filter === next;
+          btn.setAttribute("aria-pressed", pressed ? "true" : "false");
+        }
+        render();
+      }
+
+      // ======== 事件绑定 ========
+      formEl.addEventListener("submit", (e) => {
+        e.preventDefault();
+        addTodo(inputEl.value);
+        inputEl.value = "";
+        inputEl.focus();
+      });
+
+      listEl.addEventListener("click", (e) => {
+        const target = e.target;
+        const li = target.closest?.(".item");
+        if (!li) return;
+        const id = li.dataset.id;
+
+        // 点击勾选按钮：切换完成状态
+        if (target.closest?.(".check")) {
+          toggleTodo(id);
+          return;
+        }
+
+        // 点击删除按钮：删除
+        if (target.closest?.(".btn-danger")) {
+          deleteTodo(id);
+        }
+      });
+
+      clearDoneEl.addEventListener("click", () => {
+        clearDone();
+      });
+
+      for (const btn of filterButtons) {
+        btn.addEventListener("click", () => {
+          setFilter(btn.dataset.filter);
+        });
+      }
+
+      // 初次渲染
+      render();
+
+      // PWA：注册 Service Worker（需通过 http(s) 访问，本地 file:// 不会生效）
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("./sw.js").catch(() => {});
+        });
+      }
+    </script>
+  </body>
+</html>
