@@ -141,9 +141,36 @@
       /* ========= 输入区域 ========= */
       .row {
         display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+        align-items: stretch;
+      }
+
+      .input-row {
+        display: grid;
         grid-template-columns: 1fr auto;
         gap: 10px;
         align-items: center;
+      }
+
+      .schedule-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .field {
+        display: grid;
+        gap: 6px;
+      }
+
+      .field-label {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .field-full {
+        grid-column: 1 / -1;
       }
 
       .input {
@@ -270,6 +297,21 @@
         gap: 12px;
       }
 
+      .item[data-due-bucket="today"][data-done="false"] {
+        border-color: rgba(239, 68, 68, 0.28);
+        background: rgba(254, 242, 242, 0.9);
+      }
+
+      .item[data-due-bucket="tomorrow"][data-done="false"] {
+        border-color: rgba(245, 158, 11, 0.28);
+        background: rgba(255, 251, 235, 0.9);
+      }
+
+      .item[data-due-bucket="dayAfter"][data-done="false"] {
+        border-color: rgba(59, 130, 246, 0.26);
+        background: rgba(239, 246, 255, 0.88);
+      }
+
       .check {
         width: 18px;
         height: 18px;
@@ -328,6 +370,15 @@
       .item[data-done="true"] .todo-title {
         text-decoration: line-through;
         color: rgba(15, 23, 42, 0.55);
+      }
+
+      .item[data-done="true"] {
+        background: rgba(241, 245, 249, 0.7);
+        border-color: rgba(148, 163, 184, 0.32);
+      }
+
+      .item[data-done="true"] .meta {
+        color: rgba(100, 116, 139, 0.85);
       }
 
       .empty {
@@ -403,6 +454,15 @@
         }
 
         .row {
+          gap: 12px;
+        }
+
+        .input-row {
+          grid-template-columns: 1fr;
+          gap: 12px;
+        }
+
+        .schedule-grid {
           grid-template-columns: 1fr;
           gap: 12px;
         }
@@ -412,6 +472,18 @@
           min-height: 48px;
           font-size: 16px;
           padding: 14px 14px;
+        }
+
+        select.input {
+          appearance: none;
+          -webkit-appearance: none;
+          background-image: linear-gradient(45deg, transparent 50%, #94a3b8 50%),
+            linear-gradient(135deg, #94a3b8 50%, transparent 50%);
+          background-position: calc(100% - 18px) calc(50% - 3px),
+            calc(100% - 12px) calc(50% - 3px);
+          background-size: 6px 6px, 6px 6px;
+          background-repeat: no-repeat;
+          padding-right: 38px;
         }
 
         .btn {
@@ -434,7 +506,7 @@
         }
 
         .filter {
-          flex: 1 1 auto;
+          flex: 1 1 calc(50% - 8px);
           min-width: 0;
           min-height: 44px;
           padding: 10px 12px;
@@ -558,7 +630,7 @@
           </span>
         </div>
         <p class="subtitle">
-          支持：添加 / 标记完成 / 删除 / 统计数量（已完成与未完成）
+          支持：添加 / 时间与重复 / 标记完成 / 删除 / 统计数量（已完成与未完成）
         </p>
         <div class="stats" aria-label="统计信息">
           <span class="chip">未完成：<strong id="countActive">0</strong></span>
@@ -569,26 +641,59 @@
 
       <main>
         <form id="form" class="row" autocomplete="off">
-          <input
-            id="input"
-            class="input"
-            type="text"
-            placeholder="输入一个待办事项，例如：学习 30 分钟"
-            aria-label="待办输入框"
-          />
-          <button class="btn btn-primary" type="submit">添加</button>
+          <div class="input-row">
+            <input
+              id="input"
+              class="input"
+              type="text"
+              placeholder="输入一个待办事项，例如：学习 30 分钟"
+              aria-label="待办输入框"
+            />
+            <button class="btn btn-primary" type="submit">添加</button>
+          </div>
+          <div class="schedule-grid" aria-label="时间与重复设置">
+            <label class="field">
+              <span class="field-label">日期</span>
+              <input id="dueDate" class="input" type="date" aria-label="待办日期" />
+            </label>
+            <label class="field">
+              <span class="field-label">时间（半小时）</span>
+              <select id="dueTime" class="input" aria-label="待办时间"></select>
+            </label>
+            <label class="field">
+              <span class="field-label">重复规则</span>
+              <select id="repeatRule" class="input" aria-label="重复规则">
+                <option value="none">不重复</option>
+                <option value="weekly">每周重复</option>
+                <option value="monthly">每月重复</option>
+              </select>
+            </label>
+            <label class="field">
+              <span class="field-label">重复截止日期</span>
+              <input
+                id="repeatUntil"
+                class="input"
+                type="date"
+                aria-label="重复截止日期"
+                disabled
+              />
+            </label>
+          </div>
         </form>
 
         <div class="toolbar" aria-label="工具栏">
           <div class="filters" role="group" aria-label="筛选">
-            <button class="filter" type="button" data-filter="all" aria-pressed="true">
-              全部
+            <button class="filter" type="button" data-filter="near" aria-pressed="true">
+              近三天
+            </button>
+            <button class="filter" type="button" data-filter="all" aria-pressed="false">
+              全部事项
             </button>
             <button class="filter" type="button" data-filter="active" aria-pressed="false">
-              未完成
+              仅未完成
             </button>
             <button class="filter" type="button" data-filter="done" aria-pressed="false">
-              已完成
+              仅已完成
             </button>
           </div>
           <button id="clearDone" class="btn btn-ghost" type="button">
@@ -610,15 +715,12 @@
     </div>
 
     <script>
-      /**
-       * Todo App（单文件版）
-       * - 说明：所有数据会保存在浏览器 localStorage，刷新页面不会丢失
-       * - 结构：state（数据） + render（渲染） + actions（操作）
-       */
-
-      // ======== DOM 引用 ========
       const formEl = document.getElementById("form");
       const inputEl = document.getElementById("input");
+      const dueDateEl = document.getElementById("dueDate");
+      const dueTimeEl = document.getElementById("dueTime");
+      const repeatRuleEl = document.getElementById("repeatRule");
+      const repeatUntilEl = document.getElementById("repeatUntil");
       const listEl = document.getElementById("list");
       const emptyEl = document.getElementById("empty");
       const clearDoneEl = document.getElementById("clearDone");
@@ -627,30 +729,112 @@
       const countTotalEl = document.getElementById("countTotal");
       const filterButtons = Array.from(document.querySelectorAll(".filter"));
 
-      // ======== 本地存储 key（可自行修改）========
       const STORAGE_KEY = "todo_app_v1";
 
-      // ======== 应用状态 ========
-      /** @type {{ id: string, title: string, done: boolean, createdAt: number }[]} */
       let todos = loadTodos();
-      /** @type {"all" | "active" | "done"} */
-      let filter = "all";
+      /** @type {"near" | "all" | "active" | "done"} */
+      let filter = "near";
 
-      // ======== 工具函数 ========
       function uid() {
-        // 简单随机 id（不依赖外部库）
         return Math.random().toString(16).slice(2) + Date.now().toString(16);
       }
 
-      function formatTime(ts) {
-        // 将时间戳格式化成更友好的展示（本地时区）
+      function pad2(num) {
+        return String(num).padStart(2, "0");
+      }
+
+      function formatDate(ts) {
         const d = new Date(ts);
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, "0");
-        const day = String(d.getDate()).padStart(2, "0");
-        const hh = String(d.getHours()).padStart(2, "0");
-        const mm = String(d.getMinutes()).padStart(2, "0");
-        return `${y}-${m}-${day} ${hh}:${mm}`;
+        return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+      }
+
+      function formatDateTime(ts) {
+        const d = new Date(ts);
+        return `${formatDate(ts)} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+      }
+
+      function parseDateTimeToTs(dateStr, timeStr) {
+        const [y, m, d] = dateStr.split("-").map(Number);
+        const [hh, mm] = timeStr.split(":").map(Number);
+        return new Date(y, m - 1, d, hh, mm, 0, 0).getTime();
+      }
+
+      function getTodayStart() {
+        const now = new Date();
+        return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      }
+
+      function roundToHalfHour(date) {
+        const d = new Date(date.getTime());
+        const mins = d.getMinutes();
+        const rounded = mins <= 30 ? 30 : 60;
+        if (rounded === 60) {
+          d.setHours(d.getHours() + 1, 0, 0, 0);
+        } else {
+          d.setMinutes(30, 0, 0);
+        }
+        return d;
+      }
+
+      function buildTimeOptions() {
+        const opts = [];
+        for (let hour = 0; hour < 24; hour += 1) {
+          for (const minute of [0, 30]) {
+            const value = `${pad2(hour)}:${pad2(minute)}`;
+            opts.push(`<option value="${value}">${value}</option>`);
+          }
+        }
+        dueTimeEl.innerHTML = opts.join("");
+      }
+
+      function getRepeatLabel(rule) {
+        if (rule === "weekly") return "每周重复";
+        if (rule === "monthly") return "每月重复";
+        return "不重复";
+      }
+
+      function advanceOccurrence(ts, rule) {
+        const d = new Date(ts);
+        if (rule === "weekly") {
+          d.setDate(d.getDate() + 7);
+        } else if (rule === "monthly") {
+          d.setMonth(d.getMonth() + 1);
+        }
+        return d.getTime();
+      }
+
+      function getBaseDueTs(todo) {
+        if (todo.dueDate && todo.dueTime) return parseDateTimeToTs(todo.dueDate, todo.dueTime);
+        return todo.createdAt;
+      }
+
+      function getEffectiveDueTs(todo) {
+        const base = getBaseDueTs(todo);
+        if (todo.repeatRule === "none") return base;
+        const now = Date.now();
+        const untilTs = todo.repeatUntil ? parseDateTimeToTs(todo.repeatUntil, "23:59") : null;
+        let current = base;
+        while (current < now) {
+          const next = advanceOccurrence(current, todo.repeatRule);
+          if (untilTs !== null && next > untilTs) break;
+          if (next <= current) break;
+          current = next;
+        }
+        return current;
+      }
+
+      function getDueBucket(ts) {
+        const today = getTodayStart();
+        const oneDay = 24 * 60 * 60 * 1000;
+        if (ts >= today && ts < today + oneDay) return "today";
+        if (ts >= today + oneDay && ts < today + oneDay * 2) return "tomorrow";
+        if (ts >= today + oneDay * 2 && ts < today + oneDay * 3) return "dayAfter";
+        return "later";
+      }
+
+      function inNextThreeDays(ts) {
+        const today = getTodayStart();
+        return ts >= today && ts < today + 3 * 24 * 60 * 60 * 1000;
       }
 
       function saveTodos() {
@@ -663,25 +847,53 @@
           if (!raw) return [];
           const parsed = JSON.parse(raw);
           if (!Array.isArray(parsed)) return [];
-          // 做一次基础校验，避免旧数据结构导致报错
           return parsed
             .filter((t) => t && typeof t.title === "string")
-            .map((t) => ({
-              id: typeof t.id === "string" ? t.id : uid(),
-              title: String(t.title),
-              done: Boolean(t.done),
-              createdAt: typeof t.createdAt === "number" ? t.createdAt : Date.now(),
-            }));
+            .map((t) => {
+              const createdAt = typeof t.createdAt === "number" ? t.createdAt : Date.now();
+              const fallbackDate = formatDate(createdAt);
+              const fallbackTime = `${pad2(new Date(createdAt).getHours())}:${pad2(
+                Math.floor(new Date(createdAt).getMinutes() / 30) * 30
+              )}`;
+              const repeatRule = t.repeatRule === "weekly" || t.repeatRule === "monthly" ? t.repeatRule : "none";
+              return {
+                id: typeof t.id === "string" ? t.id : uid(),
+                title: String(t.title),
+                done: Boolean(t.done),
+                createdAt,
+                dueDate: typeof t.dueDate === "string" ? t.dueDate : fallbackDate,
+                dueTime: typeof t.dueTime === "string" ? t.dueTime : fallbackTime,
+                repeatRule,
+                repeatUntil: typeof t.repeatUntil === "string" ? t.repeatUntil : "",
+              };
+            });
         } catch {
           return [];
         }
       }
 
-      // ======== 渲染 ========
-      function getVisibleTodos() {
-        if (filter === "active") return todos.filter((t) => !t.done);
-        if (filter === "done") return todos.filter((t) => t.done);
-        return todos;
+      function getPreparedTodos() {
+        return todos
+          .map((todo) => {
+            const effectiveDueTs = getEffectiveDueTs(todo);
+            return {
+              ...todo,
+              effectiveDueTs,
+              dueBucket: getDueBucket(effectiveDueTs),
+            };
+          })
+          .sort((a, b) => {
+            if (a.done !== b.done) return a.done ? 1 : -1;
+            if (a.effectiveDueTs !== b.effectiveDueTs) return a.effectiveDueTs - b.effectiveDueTs;
+            return b.createdAt - a.createdAt;
+          });
+      }
+
+      function getVisibleTodos(prepared) {
+        if (filter === "near") return prepared.filter((t) => inNextThreeDays(t.effectiveDueTs));
+        if (filter === "active") return prepared.filter((t) => !t.done);
+        if (filter === "done") return prepared.filter((t) => t.done);
+        return prepared;
       }
 
       function updateStats() {
@@ -698,7 +910,8 @@
       }
 
       function render() {
-        const visible = getVisibleTodos();
+        const prepared = getPreparedTodos();
+        const visible = getVisibleTodos(prepared);
         listEl.innerHTML = "";
 
         for (const todo of visible) {
@@ -706,8 +919,8 @@
           li.className = "item";
           li.dataset.id = todo.id;
           li.dataset.done = todo.done ? "true" : "false";
+          li.dataset.dueBucket = todo.dueBucket;
 
-          // 左侧：完成勾选按钮
           const check = document.createElement("button");
           check.className = "check";
           check.type = "button";
@@ -716,19 +929,29 @@
           check.innerHTML =
             '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M16.5 6.2 8.7 14 3.5 8.8" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
-          // 中间：文字与元信息
           const textWrap = document.createElement("div");
           textWrap.className = "text";
           const title = document.createElement("p");
           title.className = "todo-title";
           title.textContent = todo.title;
+
           const meta = document.createElement("p");
           meta.className = "meta";
-          meta.textContent = `创建于：${formatTime(todo.createdAt)}`;
+          const bucketName =
+            todo.dueBucket === "today"
+              ? "今天"
+              : todo.dueBucket === "tomorrow"
+                ? "明天"
+                : todo.dueBucket === "dayAfter"
+                  ? "后天"
+                  : "更晚";
+          const repeatLabel = getRepeatLabel(todo.repeatRule);
+          const untilText = todo.repeatUntil ? `，截止：${todo.repeatUntil}` : "";
+          meta.textContent = `时间：${formatDateTime(todo.effectiveDueTs)}（${bucketName}）｜重复：${repeatLabel}${untilText}`;
+
           textWrap.appendChild(title);
           textWrap.appendChild(meta);
 
-          // 右侧：删除按钮
           const actions = document.createElement("div");
           actions.className = "actions";
           const del = document.createElement("button");
@@ -748,11 +971,24 @@
         setEmptyState(visible.length);
       }
 
-      // ======== 操作（添加 / 切换完成 / 删除 / 清空已完成 / 筛选）========
-      function addTodo(title) {
-        const t = title.trim();
-        if (!t) return;
-        todos.unshift({ id: uid(), title: t, done: false, createdAt: Date.now() });
+      function addTodo() {
+        const title = inputEl.value.trim();
+        if (!title) return;
+        if (!dueDateEl.value || !dueTimeEl.value) return;
+
+        const repeatRule = repeatRuleEl.value;
+        const repeatUntil = repeatRule === "none" ? "" : repeatUntilEl.value;
+
+        todos.unshift({
+          id: uid(),
+          title,
+          done: false,
+          createdAt: Date.now(),
+          dueDate: dueDateEl.value,
+          dueTime: dueTimeEl.value,
+          repeatRule,
+          repeatUntil,
+        });
         saveTodos();
         render();
       }
@@ -780,52 +1016,57 @@
       function setFilter(next) {
         filter = next;
         for (const btn of filterButtons) {
-          const pressed = btn.dataset.filter === next;
-          btn.setAttribute("aria-pressed", pressed ? "true" : "false");
+          btn.setAttribute("aria-pressed", btn.dataset.filter === next ? "true" : "false");
         }
         render();
       }
 
-      // ======== 事件绑定 ========
+      function syncRepeatUntilState() {
+        const isRepeat = repeatRuleEl.value !== "none";
+        repeatUntilEl.disabled = !isRepeat;
+        if (!isRepeat) repeatUntilEl.value = "";
+      }
+
+      function initFormDefaults() {
+        buildTimeOptions();
+        const nextHalfHour = roundToHalfHour(new Date());
+        dueDateEl.value = formatDate(nextHalfHour.getTime());
+        dueTimeEl.value = `${pad2(nextHalfHour.getHours())}:${pad2(nextHalfHour.getMinutes())}`;
+        syncRepeatUntilState();
+      }
+
       formEl.addEventListener("submit", (e) => {
         e.preventDefault();
-        addTodo(inputEl.value);
+        addTodo();
         inputEl.value = "";
         inputEl.focus();
       });
+
+      repeatRuleEl.addEventListener("change", syncRepeatUntilState);
 
       listEl.addEventListener("click", (e) => {
         const target = e.target;
         const li = target.closest?.(".item");
         if (!li) return;
         const id = li.dataset.id;
-
-        // 点击勾选按钮：切换完成状态
         if (target.closest?.(".check")) {
           toggleTodo(id);
           return;
         }
-
-        // 点击删除按钮：删除
         if (target.closest?.(".btn-danger")) {
           deleteTodo(id);
         }
       });
 
-      clearDoneEl.addEventListener("click", () => {
-        clearDone();
-      });
+      clearDoneEl.addEventListener("click", clearDone);
 
       for (const btn of filterButtons) {
-        btn.addEventListener("click", () => {
-          setFilter(btn.dataset.filter);
-        });
+        btn.addEventListener("click", () => setFilter(btn.dataset.filter));
       }
 
-      // 初次渲染
+      initFormDefaults();
       render();
 
-      // PWA：注册 Service Worker（需通过 http(s) 访问，本地 file:// 不会生效）
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", () => {
           navigator.serviceWorker.register("./sw.js").catch(() => {});
